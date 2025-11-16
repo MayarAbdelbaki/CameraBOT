@@ -1,0 +1,13 @@
+using the code of camcap and facedetection. I want two functions for each one. if it detect face. it capture an image.
+I want the process to be clean, the current code looks a lil weird. but I want the face detection model to work on a while True
+so it always try to detect face. and if it did, it capture image and move on.
+the image should be saved in a folder with numbers starting from 1
+the final img shouldn't contain the bounding box. only the image
+the camera capture should be instantly after detecting a face.
+and to avoid multiple save for the same face or image -> it should check the face each 5secs
+
+=> add anything that you think would help in makeing the capture clean
+
+A VERY IMPORTANT NOTE: you should be changing the functions or library used in that already exists code
+cuz the code will be deployed on a hardware "PrimeX autocar" and it got this codes as templates and we don't 
+want to miss things up
