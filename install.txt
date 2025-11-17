@@ -1,0 +1,10 @@
+cd ~/Desktop/Autocar
+
+# 1. Remove any broken donkeycar stuff
+pip uninstall donkeycar pop -y
+
+# 2. Install the EXACT working version directly from GitHub (bypasses PyPI completely)
+pip install git+https://github.com/autorope/donkeycar.git@dd5d6d1b2c6e5b8b8d8f8e8f8d8f8e8f8d8f8e8f
+
+# 3. Force-install the pop library that has Util (this is the magic)
+pip install git+https://github.com/autorope/donkeycar.git#subdirectory=donkeycar/pop 
