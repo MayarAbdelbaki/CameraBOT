@@ -6,8 +6,8 @@ from popx import Util
 
 class FaceCapture:
     def __init__(self, save_folder="captured_faces", width=640, height=480, 
-                 hf_api_url="https://mariamLabib-ssig-ppee.hf.space/run/predict",
-                 hf_api_token="rKRjgpiTexUgadhxmxIfXEnshJLEazAhfF"):
+                 hf_api_url="https://mayarelshamy-ssig.hf.space/api/predict",
+                 hf_api_token="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"):
         """
         Initialize the face capture system.
         
