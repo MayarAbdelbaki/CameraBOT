@@ -1,10 +1,99 @@
-cd ~/Desktop/Autocar
+cd ~/Desktop/Autocar  # Your project dir
+python3 -m venv donkey_venv --system-site-packages  # Includes NVIDIA libs
+source donkey_venv/bin/activate
+pip install --upgrade pip setuptools wheel cython numpy
 
-# 1. Remove any broken donkeycar stuff
-pip uninstall donkeycar pop -y
+# Add to ~/.bashrc for auto-activation
+echo "source ~/Desktop/Autocar/donkey_venv/bin/activate" >> ~/.bashrc
 
-# 2. Install the EXACT working version directly from GitHub (bypasses PyPI completely)
-pip install git+https://github.com/autorope/donkeycar.git@dd5d6d1b2c6e5b8b8d8f8e8f8d8f8e8f8d8f8e8f
 
-# 3. Force-install the pop library that has Util (this is the magic)
-pip install git+https://github.com/autorope/donkeycar.git#subdirectory=donkeycar/pop 
+
+
+
+git clone https://github.com/autorope/donkeycar.git
+cd donkeycar
+git checkout v4.7.5  # Stable for Python 3.10 + Jetson
+pip install -e .[nano] -i https://pypi.tuna.tsinghua.edu.cn/simple --timeout 6000
+
+# Install TensorFlow (Jetson-optimized)
+pip install --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v46 tensorflow==2.10.0+nv22.1 -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+
+# Vehicle params for PrimeX
+DRIVE_LOOP_HZ = 20  # 20 FPS for smooth driving
+PCA968X_I2C_BUS = 1  # Jetson I2C bus
+STEERING_CHANNEL = 0
+THROTTLE_CHANNEL = 1
+STEERING_LEFT_PWM = 290  # Calibrate for PrimeX steering
+STEERING_RIGHT_PWM = 490
+THROTTLE_FORWARD_PWM = 300  # Adjust based on your ESC
+THROTTLE_STOPPED_PWM = 370
+
+# Camera (for person detection)
+CAMERA_TYPE = "USB"  # Or "CSI" for CSI cam
+IMAGE_W = 160
+IMAGE_H = 120
+IMAGE_D = 3
+
+# Tub for data collection
+TUB_PATH = "~/mycar/data/tub"
+
+
+
+
+
+
+import cv2
+import os
+import time
+import numpy as np
+from datetime import datetime
+from pop import util  # Donkeycar's util for imshow
+import requests
+import base64
+from io import BytesIO
+from PIL import Image
+
+# Try to load .env if python-dotenv is installed
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("python-dotenv not installed; skipping .env load")
+
+util.enable_imshow()  # For Jupyter display
+
+# Person detection with OpenCV DNN (Haar cascade or YOLO)
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+# Camera setup (USB for PrimeX)
+cap = cv2.VideoCapture(0)  # Index 0 for default USB cam
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+if not cap.isOpened():
+    print("Error: Camera not accessible. Check USB connection on Jetson.")
+    exit()
+
+print("Camera ready. Press 'q' to quit.")
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        print("Failed to grab frame.")
+        break
+    
+    # Person/Face detection
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+    
+    for (x, y, w, h) in faces:
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+        print(f"Person detected at {datetime.now()}")
+    
+    cv2.imshow('PrimeX Person Detection', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
