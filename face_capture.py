@@ -126,8 +126,8 @@ class FaceCapture:
     
     def send_to_huggingface(self, image_path):
         """
-        Send captured image to Hugging Face Space API (Gradio format).
-        Converts image to base64 and sends as JSON payload.
+        Send captured image to Hugging Face Space API.
+        Sends image as file upload (multipart/form-data) to avoid Content-Length issues.
         
         Args:
             image_path: Path to the image file to send
@@ -136,94 +136,131 @@ class FaceCapture:
             bool: True if successful, False otherwise
         """
         try:
-            # Read image file and convert to base64
-            with open(image_path, 'rb') as image_file:
-                image_bytes = image_file.read()
-                image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                
-                # Create data URL format for Gradio API
-                image_data_url = f"data:image/jpeg;base64,{image_base64}"
-                
-                # Prepare JSON payload for Gradio API
-                # Gradio expects: {"data": [input1, input2, ...]}
-                payload = {
-                    "data": [image_data_url]
-                }
-                
-                # Prepare headers
-                headers = {
-                    'Content-Type': 'application/json',
-                    'Authorization': f'Bearer {self.hf_api_token}'
-                }
-                
-                # Try different endpoint formats
-                # First, extract base URL
-                base_url = self.hf_api_url.split('/api/')[0] if '/api/' in self.hf_api_url else self.hf_api_url.rsplit('/', 1)[0]
-                
-                # Query API info to get correct endpoint (optional, for debugging)
-                api_info = self._get_gradio_api_info()
-                if api_info:
-                    print(f"  API Info: Found {len(api_info.get('named_endpoints', {}))} named endpoints")
-                
-                # Try /run/predict endpoint (newer Gradio format)
-                # Note: For Gradio Spaces, the endpoint might need function index
-                endpoints_to_try = [
-                    f"{base_url}/run/predict",  # Newer Gradio format (function 0)
-                    f"{base_url}/api/predict",  # Standard API format
-                    self.hf_api_url,  # Original endpoint
-                ]
-                
-                # Try with and without Authorization header (some public spaces don't need it)
-                header_variants = [
-                    headers,  # With auth
-                    {'Content-Type': 'application/json'}  # Without auth
-                ]
-                
-                last_error = None
-                for endpoint in endpoints_to_try:
-                    for header_set in header_variants:
-                        try:
-                            # Send POST request to Hugging Face Gradio Space API
-                            response = requests.post(
-                                endpoint,
-                                json=payload,
-                                headers=header_set,
-                                timeout=30
-                            )
+            # Extract base URL
+            base_url = self.hf_api_url.split('/api/')[0] if '/api/' in self.hf_api_url else self.hf_api_url.rsplit('/', 1)[0]
+            
+            # Try different endpoint formats
+            endpoints_to_try = [
+                f"{base_url}/api/predict",  # Standard API format
+                f"{base_url}/run/predict",  # Newer Gradio format
+                self.hf_api_url,  # Original endpoint
+            ]
+            
+            # Prepare headers with authorization
+            headers_with_auth = {
+                'Authorization': f'Bearer {self.hf_api_token}'
+            }
+            headers_without_auth = {}
+            
+            last_error = None
+            for endpoint in endpoints_to_try:
+                # Try with and without authorization
+                for headers in [headers_with_auth, headers_without_auth]:
+                    try:
+                        # Open image file for upload
+                        with open(image_path, 'rb') as image_file:
+                            # Prepare file for multipart/form-data upload
+                            files = {
+                                'file': (os.path.basename(image_path), image_file, 'image/jpeg')
+                            }
                             
-                            # Check if request was successful
-                            if response.status_code == 200:
-                                print(f"✓ Image sent to Hugging Face successfully (endpoint: {endpoint})")
+                            # For Gradio API, we might need to send as form data with specific field name
+                            # Try different field names that Gradio might expect
+                            field_names_to_try = ['file', 'image', 'data', 'input']
+                            
+                            response = None
+                            for field_name in field_names_to_try:
                                 try:
-                                    result = response.json()
-                                    if result.get('data'):
-                                        print(f"  Response received: {str(result.get('data'))[:100]}")
-                                except:
-                                    pass
-                                return True
-                            elif response.status_code == 405:
-                                # 405 error, try next endpoint/header combination
-                                continue
-                            else:
-                                last_error = f"Status {response.status_code}: {response.text[:200]}"
-                                # Don't continue on non-405 errors, might be auth issue
-                                if response.status_code == 401 or response.status_code == 403:
-                                    continue  # Try without auth
+                                    # Reset file pointer
+                                    image_file.seek(0)
+                                    
+                                    # Prepare files dict with current field name
+                                    files = {
+                                        field_name: (os.path.basename(image_path), image_file, 'image/jpeg')
+                                    }
+                                    
+                                    # Send POST request with file upload
+                                    response = requests.post(
+                                        endpoint,
+                                        files=files,
+                                        headers=headers,
+                                        timeout=30
+                                    )
+                                    
+                                    # Check if request was successful
+                                    if response.status_code == 200:
+                                        print(f"✓ Image sent to Hugging Face successfully")
+                                        print(f"  Endpoint: {endpoint}, Field: {field_name}")
+                                        try:
+                                            result = response.json()
+                                            if result.get('data'):
+                                                print(f"  Response received: {str(result.get('data'))[:100]}")
+                                        except:
+                                            pass
+                                        return True
+                                    elif response.status_code == 405:
+                                        # 405 error, try next field name
+                                        last_error = f"Status 405: Method not allowed"
+                                        continue
+                                    else:
+                                        last_error = f"Status {response.status_code}: {response.text[:200]}"
+                                        # If it's not a 405, might be wrong field name, try next
+                                        if response.status_code != 404:
+                                            continue
+                                        break
+                                        
+                                except requests.exceptions.RequestException as e:
+                                    last_error = str(e)
+                                    continue
+                            
+                            # If we got 405 on all field names, try next endpoint/header combination
+                            if response and response.status_code == 405:
                                 break
                                 
-                        except requests.exceptions.RequestException as e:
-                            last_error = str(e)
-                            continue
-                    
-                    # If we got a non-405 error, don't try other endpoints
-                    if last_error and "405" not in str(last_error):
-                        break
+                    except FileNotFoundError:
+                        print(f"✗ Image file not found: {image_path}")
+                        return False
+                    except requests.exceptions.RequestException as e:
+                        last_error = str(e)
+                        continue
                 
-                # If all endpoints failed, report error
-                print(f"✗ Failed to send image to Hugging Face. Tried {len(endpoints_to_try)} endpoints")
-                if last_error:
-                    print(f"  Last error: {last_error}")
-                return False
+                # If we got a non-405 error consistently, don't try other endpoints
+                if last_error and "405" not in str(last_error):
+                    break
+            
+            # If file upload failed, try base64 JSON format as fallback
+            print(f"  Trying base64 JSON format as fallback...")
+            try:
+                with open(image_path, 'rb') as image_file:
+                    image_bytes = image_file.read()
+                    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                    image_data_url = f"data:image/jpeg;base64,{image_base64}"
+                    
+                    payload = {"data": [image_data_url]}
+                    headers = {
+                        'Content-Type': 'application/json',
+                        'Authorization': f'Bearer {self.hf_api_token}'
+                    }
+                    
+                    # Try the original endpoint with base64
+                    response = requests.post(
+                        self.hf_api_url,
+                        json=payload,
+                        headers=headers,
+                        timeout=30
+                    )
+                    
+                    if response.status_code == 200:
+                        print(f"✓ Image sent to Hugging Face successfully (base64 format)")
+                        return True
+            except Exception as e:
+                pass  # Already tried, just continue to error report
+            
+            # If all methods failed, report error
+            print(f"✗ Failed to send image to Hugging Face. Tried file upload and base64 formats")
+            if last_error:
+                print(f"  Last error: {last_error}")
+            return False
                     
         except requests.exceptions.Timeout:
             print(f"✗ Timeout while sending image to Hugging Face")
