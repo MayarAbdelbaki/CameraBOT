@@ -1,3 +1,13 @@
+sudo apt update && sudo apt upgrade -y  # Or pacman -Syu on Arch
+sudo apt install -y python3-pip python3-venv git nano libhdf5-serial-dev hdf5-tools libhdf5-dev zlib1g-dev zip libjpeg8-dev liblapack-dev libblas-dev gfortran libxslt1-dev libxml2-dev libffi-dev libcurl4-openssl-dev libssl-dev libpng-dev libopenblas-dev libfreetype6-dev openmpi-bin libopenmpi-dev
+
+# Jetson-specific (if on JetPack)
+sudo apt install -y nvidia-jetpack  # Installs CUDA 10.2, TensorRT, etc.
+
+
+
+
+
 cd ~/Desktop/Autocar  # Your project dir
 python3 -m venv donkey_venv --system-site-packages  # Includes NVIDIA libs
 source donkey_venv/bin/activate
