@@ -104,6 +104,26 @@ class FaceCapture:
         
         return len(faces) > 0
     
+    def _get_gradio_api_info(self):
+        """
+        Query Gradio Space API info to determine correct endpoint format.
+        Returns API info dict or None if failed.
+        """
+        try:
+            base_url = self.hf_api_url.split('/api/')[0] if '/api/' in self.hf_api_url else self.hf_api_url.rsplit('/', 1)[0]
+            api_info_url = f"{base_url}/api/"
+            
+            headers = {
+                'Authorization': f'Bearer {self.hf_api_token}'
+            }
+            
+            response = requests.get(api_info_url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                return response.json()
+        except:
+            pass
+        return None
+    
     def send_to_huggingface(self, image_path):
         """
         Send captured image to Hugging Face Space API (Gradio format).
@@ -136,29 +156,74 @@ class FaceCapture:
                     'Authorization': f'Bearer {self.hf_api_token}'
                 }
                 
-                # Send POST request to Hugging Face Gradio Space API
-                response = requests.post(
-                    self.hf_api_url,
-                    json=payload,
-                    headers=headers,
-                    timeout=30  # Increased timeout for API processing
-                )
+                # Try different endpoint formats
+                # First, extract base URL
+                base_url = self.hf_api_url.split('/api/')[0] if '/api/' in self.hf_api_url else self.hf_api_url.rsplit('/', 1)[0]
                 
-                # Check if request was successful
-                if response.status_code == 200:
-                    print(f"✓ Image sent to Hugging Face successfully")
-                    try:
-                        result = response.json()
-                        if result.get('data'):
-                            print(f"  Response received: {str(result.get('data'))[:100]}")
-                    except:
-                        pass
-                    return True
-                else:
-                    print(f"✗ Failed to send image to Hugging Face. Status code: {response.status_code}")
-                    if response.text:
-                        print(f"  Response: {response.text[:200]}")
-                    return False
+                # Query API info to get correct endpoint (optional, for debugging)
+                api_info = self._get_gradio_api_info()
+                if api_info:
+                    print(f"  API Info: Found {len(api_info.get('named_endpoints', {}))} named endpoints")
+                
+                # Try /run/predict endpoint (newer Gradio format)
+                # Note: For Gradio Spaces, the endpoint might need function index
+                endpoints_to_try = [
+                    f"{base_url}/run/predict",  # Newer Gradio format (function 0)
+                    f"{base_url}/api/predict",  # Standard API format
+                    self.hf_api_url,  # Original endpoint
+                ]
+                
+                # Try with and without Authorization header (some public spaces don't need it)
+                header_variants = [
+                    headers,  # With auth
+                    {'Content-Type': 'application/json'}  # Without auth
+                ]
+                
+                last_error = None
+                for endpoint in endpoints_to_try:
+                    for header_set in header_variants:
+                        try:
+                            # Send POST request to Hugging Face Gradio Space API
+                            response = requests.post(
+                                endpoint,
+                                json=payload,
+                                headers=header_set,
+                                timeout=30
+                            )
+                            
+                            # Check if request was successful
+                            if response.status_code == 200:
+                                print(f"✓ Image sent to Hugging Face successfully (endpoint: {endpoint})")
+                                try:
+                                    result = response.json()
+                                    if result.get('data'):
+                                        print(f"  Response received: {str(result.get('data'))[:100]}")
+                                except:
+                                    pass
+                                return True
+                            elif response.status_code == 405:
+                                # 405 error, try next endpoint/header combination
+                                continue
+                            else:
+                                last_error = f"Status {response.status_code}: {response.text[:200]}"
+                                # Don't continue on non-405 errors, might be auth issue
+                                if response.status_code == 401 or response.status_code == 403:
+                                    continue  # Try without auth
+                                break
+                                
+                        except requests.exceptions.RequestException as e:
+                            last_error = str(e)
+                            continue
+                    
+                    # If we got a non-405 error, don't try other endpoints
+                    if last_error and "405" not in str(last_error):
+                        break
+                
+                # If all endpoints failed, report error
+                print(f"✗ Failed to send image to Hugging Face. Tried {len(endpoints_to_try)} endpoints")
+                if last_error:
+                    print(f"  Last error: {last_error}")
+                return False
                     
         except requests.exceptions.Timeout:
             print(f"✗ Timeout while sending image to Hugging Face")
