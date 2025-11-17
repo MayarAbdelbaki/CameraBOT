@@ -21,8 +21,20 @@ except ImportError:
 # 1️⃣ Configuration
 # ---------------------------
 # Hugging Face API Configuration
-HF_API_URL = os.getenv("HF_API_URL", "https://api-inference.huggingface.co/models/your-model-name")
-HF_API_KEY = os.getenv("HF_API_KEY", "")  # Required: Your Hugging Face API key
+# Set USE_GRADIO_SPACE to True if using a Gradio Space, False for Inference API
+USE_GRADIO_SPACE = os.getenv("USE_GRADIO_SPACE", "True").lower() == "true"
+SPACE_NAME = os.getenv("SPACE_NAME", "mayarelshamy/ssig")  # Format: username/space-name or username/model-name
+
+# Construct the correct API URL
+if USE_GRADIO_SPACE:
+    # For Gradio Space: https://username-spacename.hf.space/api/predict
+    space_url = SPACE_NAME.replace('/', '-')
+    HF_API_URL = os.getenv("HF_API_URL", f"https://{space_url}.hf.space/api/predict")
+else:
+    # For Inference API: https://api-inference.huggingface.co/models/username/model-name
+    HF_API_URL = os.getenv("HF_API_URL", f"https://api-inference.huggingface.co/models/{SPACE_NAME}")
+
+HF_API_KEY = os.getenv("HF_API_KEY", "")  # Optional for public Gradio Spaces, required for Inference API
 
 # Supabase Configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://kwjxcodhmxlsvkftsgcg.supabase.co")
@@ -109,7 +121,10 @@ print(f"\n{'='*50}")
 print(f"Initializing laptop camera...")
 print(f"  Camera index: {CAMERA_INDEX}")
 print(f"  Target resolution: {CAMERA_WIDTH}x{CAMERA_HEIGHT}")
+print(f"  API Mode: {'Gradio Space' if USE_GRADIO_SPACE else 'Inference API'}")
+print(f"  Space/Model: {SPACE_NAME}")
 print(f"  Hugging Face API: {HF_API_URL}")
+print(f"  API Key configured: {'Yes' if HF_API_KEY else 'No'}")
 print(f"{'='*50}\n")
 
 cap = initialize_camera()
@@ -127,10 +142,11 @@ if cap is None:
 def send_image_to_huggingface(image_path):
     """
     Send image to Hugging Face API for person identification and PPE detection.
+    Supports both Gradio Space and Inference API formats.
     Returns: dict with person_id, name, ppe_status, confidence, or None if failed
     """
-    if not HF_API_KEY:
-        print("  ✗ HF_API_KEY not set. Cannot send to Hugging Face.")
+    if not HF_API_KEY and not USE_GRADIO_SPACE:
+        print("  ✗ HF_API_KEY not set. Required for Inference API.")
         return None
     
     try:
@@ -138,20 +154,46 @@ def send_image_to_huggingface(image_path):
         with open(image_path, "rb") as f:
             image_bytes = f.read()
         
-        # Prepare headers with API key
-        headers = {
-            "Authorization": f"Bearer {HF_API_KEY}",
-            "Content-Type": "application/octet-stream"
-        }
-        
-        # Send POST request to Hugging Face Inference API
-        print("  → Sending image to Hugging Face API...")
-        response = requests.post(
-            HF_API_URL,
-            headers=headers,
-            data=image_bytes,
-            timeout=30
-        )
+        # Prepare request based on API type
+        if USE_GRADIO_SPACE:
+            # Gradio Space expects JSON with base64 encoded image
+            import base64
+            image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+            
+            headers = {
+                "Content-Type": "application/json"
+            }
+            
+            # Add authorization header if token is provided
+            if HF_API_KEY:
+                headers["Authorization"] = f"Bearer {HF_API_KEY}"
+            
+            # Gradio API format: {"data": [input1, input2, ...]}
+            payload = {
+                "data": [image_b64]
+            }
+            
+            print("  → Sending image to Gradio Space API...")
+            response = requests.post(
+                HF_API_URL,
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+        else:
+            # Inference API expects raw image bytes
+            headers = {
+                "Authorization": f"Bearer {HF_API_KEY}",
+                "Content-Type": "application/octet-stream"
+            }
+            
+            print("  → Sending image to Hugging Face Inference API...")
+            response = requests.post(
+                HF_API_URL,
+                headers=headers,
+                data=image_bytes,
+                timeout=30
+            )
         
         if response.status_code == 200:
             try:
@@ -202,7 +244,26 @@ def send_image_to_huggingface(image_path):
                 return None
         else:
             print(f"  ✗ API request failed with status code: {response.status_code}")
-            print(f"  Response: {response.text[:200]}")
+            print(f"  Response: {response.text[:500]}")
+            
+            # Provide helpful debugging information
+            if response.status_code == 405:
+                print(f"\n  💡 Error 405 (Method Not Allowed) - Possible causes:")
+                print(f"     1. Wrong endpoint URL - check if it's a Space or Inference API")
+                print(f"     2. For Gradio Space, use: https://username-spacename.hf.space/api/predict")
+                print(f"     3. For Inference API, use: https://api-inference.huggingface.co/models/username/model")
+                print(f"     Current URL: {HF_API_URL}")
+                print(f"     Current mode: {'Gradio Space' if USE_GRADIO_SPACE else 'Inference API'}")
+            elif response.status_code == 404:
+                print(f"\n  💡 Error 404 (Not Found) - Check if:")
+                print(f"     1. The Space/Model exists and is public")
+                print(f"     2. The URL format is correct")
+                print(f"     Current URL: {HF_API_URL}")
+            elif response.status_code == 401 or response.status_code == 403:
+                print(f"\n  💡 Error {response.status_code} (Unauthorized/Forbidden) - Check if:")
+                print(f"     1. Your API token is valid")
+                print(f"     2. You have access to this Space/Model")
+            
             return None
             
     except requests.exceptions.Timeout:

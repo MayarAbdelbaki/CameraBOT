@@ -7,8 +7,10 @@ from popx import Util
 
 class FaceCapture:
     def __init__(self, save_folder="captured_faces", width=640, height=480, 
-                 hf_api_url="https://api-inference.huggingface.co/models/mayarelshamy-ssig",
-                 hf_api_token="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"):
+                 hf_api_url=None,
+                 hf_api_token=None,
+                 use_gradio_space=True,
+                 space_name="mayarelshamy/ssig"):
         """
         Initialize the face capture system.
         
@@ -16,8 +18,10 @@ class FaceCapture:
             save_folder: Directory to save captured face images
             width: Camera frame width
             height: Camera frame height
-            hf_api_url: Hugging Face Space API URL
-            hf_api_token: Hugging Face API token
+            hf_api_url: Hugging Face API URL (if None, will be constructed from space_name)
+            hf_api_token: Hugging Face API token (optional for public models)
+            use_gradio_space: If True, uses Gradio Space API format, else uses Inference API
+            space_name: Space name in format "username/space-name" or model name for Inference API
         """
         self.save_folder = save_folder
         self.width = width
@@ -27,8 +31,25 @@ class FaceCapture:
         self.capture_interval = 5  # Wait 5 seconds between captures
         
         # Hugging Face API configuration
-        self.hf_api_url = hf_api_url
+        # Construct the correct API URL based on type
+        if hf_api_url is None:
+            if use_gradio_space:
+                # For Gradio Spaces, use the /api/predict endpoint
+                # Format: https://username-spacename.hf.space/api/predict
+                space_url = space_name.replace('/', '-')
+                self.hf_api_url = f"https://{space_url}.hf.space/api/predict"
+                print(f"📡 Using Gradio Space API: {self.hf_api_url}")
+            else:
+                # For Inference API, use the models endpoint
+                # Format: https://api-inference.huggingface.co/models/username/model-name
+                self.hf_api_url = f"https://api-inference.huggingface.co/models/{space_name}"
+                print(f"📡 Using Hugging Face Inference API: {self.hf_api_url}")
+        else:
+            self.hf_api_url = hf_api_url
+            print(f"📡 Using custom API URL: {self.hf_api_url}")
+        
         self.hf_api_token = hf_api_token
+        self.use_gradio_space = use_gradio_space
         
         # Create save folder if it doesn't exist
         if not os.path.exists(self.save_folder):
@@ -120,20 +141,51 @@ class FaceCapture:
             with open(image_path, "rb") as f:
                 image_bytes = f.read()
             
-            # Prepare headers with API key (same format as camera_person_detection.py)
-            headers = {
-                "Authorization": f"Bearer {self.hf_api_token}",
-                "Content-Type": "application/octet-stream"
-            }
-            
-            # Send POST request to Hugging Face Inference API
-            print(f"  → Sending image to Hugging Face API...")
-            response = requests.post(
-                self.hf_api_url,
-                headers=headers,
-                data=image_bytes,
-                timeout=30
-            )
+            # Prepare request based on API type
+            if self.use_gradio_space:
+                # Gradio Space expects JSON with base64 encoded image
+                import base64
+                image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+                
+                headers = {
+                    "Content-Type": "application/json"
+                }
+                
+                # Add authorization header if token is provided
+                if self.hf_api_token:
+                    headers["Authorization"] = f"Bearer {self.hf_api_token}"
+                
+                # Gradio API format: {"data": [input1, input2, ...]}
+                payload = {
+                    "data": [image_b64]
+                }
+                
+                print(f"  → Sending image to Gradio Space API...")
+                response = requests.post(
+                    self.hf_api_url,
+                    headers=headers,
+                    json=payload,
+                    timeout=30
+                )
+            else:
+                # Inference API expects raw image bytes
+                headers = {
+                    "Content-Type": "application/octet-stream"
+                }
+                
+                # Authorization is required for Inference API
+                if self.hf_api_token:
+                    headers["Authorization"] = f"Bearer {self.hf_api_token}"
+                else:
+                    print("  ⚠ Warning: No API token provided for Inference API")
+                
+                print(f"  → Sending image to Hugging Face Inference API...")
+                response = requests.post(
+                    self.hf_api_url,
+                    headers=headers,
+                    data=image_bytes,
+                    timeout=30
+                )
             
             # Check if request was successful
             if response.status_code == 200:
@@ -142,12 +194,29 @@ class FaceCapture:
                     result = response.json()
                     print(f"  Response received: {str(result)[:200]}")
                 except:
-                    pass
+                    print(f"  Response: {response.text[:200] if response.text else 'No JSON response'}")
                 return True
             else:
                 print(f"✗ Failed to send image to Hugging Face. Status code: {response.status_code}")
-                if response.text:
-                    print(f"  Response: {response.text[:200]}")
+                print(f"  Error: {response.text[:500]}")
+                
+                # Provide helpful debugging information
+                if response.status_code == 405:
+                    print(f"\n  💡 Error 405 (Method Not Allowed) - Possible causes:")
+                    print(f"     1. Wrong endpoint URL - check if it's a Space or Inference API")
+                    print(f"     2. For Gradio Space, use: https://username-spacename.hf.space/api/predict")
+                    print(f"     3. For Inference API, use: https://api-inference.huggingface.co/models/username/model")
+                    print(f"     Current URL: {self.hf_api_url}")
+                elif response.status_code == 404:
+                    print(f"\n  💡 Error 404 (Not Found) - Check if:")
+                    print(f"     1. The Space/Model exists and is public")
+                    print(f"     2. The URL format is correct")
+                    print(f"     Current URL: {self.hf_api_url}")
+                elif response.status_code == 401 or response.status_code == 403:
+                    print(f"\n  💡 Error {response.status_code} (Unauthorized/Forbidden) - Check if:")
+                    print(f"     1. Your API token is valid")
+                    print(f"     2. You have access to this Space/Model")
+                
                 return False
                     
         except FileNotFoundError:
