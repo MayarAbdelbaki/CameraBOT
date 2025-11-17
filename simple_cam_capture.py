@@ -1,6 +1,6 @@
 import cv2
 import os
-from pop import Util
+from popx import Util
 
 # Global camera instance
 _camera = None

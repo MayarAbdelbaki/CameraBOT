@@ -2,7 +2,7 @@ import cv2
 import time
 import os
 import requests
-from pop import Util
+from popx import Util
 
 class FaceCapture:
     def __init__(self, save_folder="captured_faces", width=640, height=480, 
