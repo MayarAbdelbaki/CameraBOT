@@ -2,6 +2,7 @@ import cv2
 import time
 import os
 import requests
+import base64
 from popx import Util
 
 class FaceCapture:
@@ -105,8 +106,8 @@ class FaceCapture:
     
     def send_to_huggingface(self, image_path):
         """
-        Send captured image to Hugging Face Space API.
-        Opens the image file in binary mode and sends it using HTTP POST request.
+        Send captured image to Hugging Face Space API (Gradio format).
+        Converts image to base64 and sends as JSON payload.
         
         Args:
             image_path: Path to the image file to send
@@ -115,25 +116,43 @@ class FaceCapture:
             bool: True if successful, False otherwise
         """
         try:
-            # Open the image file in binary mode
+            # Read image file and convert to base64
             with open(image_path, 'rb') as image_file:
-                # Prepare the files and headers for the API request
-                files = {'file': (os.path.basename(image_path), image_file, 'image/jpeg')}
+                image_bytes = image_file.read()
+                image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                
+                # Create data URL format for Gradio API
+                image_data_url = f"data:image/jpeg;base64,{image_base64}"
+                
+                # Prepare JSON payload for Gradio API
+                # Gradio expects: {"data": [input1, input2, ...]}
+                payload = {
+                    "data": [image_data_url]
+                }
+                
+                # Prepare headers
                 headers = {
+                    'Content-Type': 'application/json',
                     'Authorization': f'Bearer {self.hf_api_token}'
                 }
                 
-                # Send POST request to Hugging Face API
+                # Send POST request to Hugging Face Gradio Space API
                 response = requests.post(
                     self.hf_api_url,
-                    files=files,
+                    json=payload,
                     headers=headers,
-                    timeout=10  # 10 second timeout
+                    timeout=30  # Increased timeout for API processing
                 )
                 
                 # Check if request was successful
                 if response.status_code == 200:
                     print(f"✓ Image sent to Hugging Face successfully")
+                    try:
+                        result = response.json()
+                        if result.get('data'):
+                            print(f"  Response received: {str(result.get('data'))[:100]}")
+                    except:
+                        pass
                     return True
                 else:
                     print(f"✗ Failed to send image to Hugging Face. Status code: {response.status_code}")
@@ -149,6 +168,8 @@ class FaceCapture:
             return False
         except Exception as e:
             print(f"✗ Unexpected error sending image to Hugging Face: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def capture_image(self, frame):

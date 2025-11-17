@@ -1,0 +1,143 @@
+==== Application Startup at 2025-11-17 10:20:38 =====
+
+WARNING ⚠️ user config directory '/root/.config/Ultralytics' is not writable, using '/tmp/Ultralytics'. Set YOLO_CONFIG_DIR to override.
+Creating new Ultralytics Settings v0.0.6 file ✅ 
+View Ultralytics Settings with 'yolo settings' or at '/tmp/Ultralytics/settings.json'
+Update Settings with 'yolo settings key=value', i.e. 'yolo settings runs_dir=path/to/dir'. For help see https://docs.ultralytics.com/quickstart/#ultralytics-settings.
+25-11-17 11:22:17 - Directory /root/.deepface has been created
+25-11-17 11:22:17 - Directory /root/.deepface/weights has been created
+✓ Connected to Supabase
+********************************************
+* Trying to transpile functions from Python -> JS for performance
+
+* (1/1) <lambda>: ✅
+********************************************
+
+* Running on local URL:  http://0.0.0.0:7860, with SSR ⚡ (experimental, to disable set `ssr_mode=False` in `launch()`)
+* To create a public link, set `share=True` in `launch()`.
+Too little data for declared Content-Length
+L [Error]: POST method not allowed. No actions exist for this page
+    at hr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:154:5951)
+    at Ir (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:207:326)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async g (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:13351)
+    at async Tt (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:11927)
+    at async Array.ssr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/handler.js:1261:3) {
+  status: 405,
+  text: 'Method Not Allowed'
+}
+Too little data for declared Content-Length
+L [Error]: POST method not allowed. No actions exist for this page
+    at hr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:154:5951)
+    at Ir (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:207:326)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async g (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:13351)
+    at async Tt (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:11927)
+    at async Array.ssr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/handler.js:1261:3) {
+  status: 405,
+  text: 'Method Not Allowed'
+}
+Too little data for declared Content-Length
+L [Error]: POST method not allowed. No actions exist for this page
+    at hr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:154:5951)
+    at Ir (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:207:326)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async g (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:13351)
+    at async Tt (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:11927)
+    at async Array.ssr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/handler.js:1261:3) {
+  status: 405,
+  text: 'Method Not Allowed'
+}
+Too little data for declared Content-Length
+L [Error]: POST method not allowed. No actions exist for this page
+    at hr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:154:5951)
+    at Ir (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:207:326)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async g (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:13351)
+    at async Tt (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:11927)
+    at async Array.ssr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/handler.js:1261:3) {
+  status: 405,
+  text: 'Method Not Allowed'
+}
+Too little data for declared Content-Length
+L [Error]: POST method not allowed. No actions exist for this page
+    at hr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:154:5951)
+    at Ir (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:207:326)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async g (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:13351)
+    at async Tt (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:11927)
+    at async Array.ssr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/handler.js:1261:3) {
+  status: 405,
+  text: 'Method Not Allowed'
+}
+Too little data for declared Content-Length
+L [Error]: POST method not allowed. No actions exist for this page
+    at hr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:154:5951)
+    at Ir (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:207:326)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async g (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:13351)
+    at async Tt (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/server/index.js:212:11927)
+    at async Array.ssr (file:///usr/local/lib/python3.10/site-packages/gradio/templates/node/build/handler.js:1261:3) {
+  status: 405,
+  text: 'Method Not Allowed'
+}
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+25-11-17 12:00:23 - 🔗 openface_weights.h5 will be downloaded from https://github.com/serengil/deepface_models/releases/download/v1.0/openface_weights.h5 to /root/.deepface/weights/openface_weights.h5...
+Downloading...
+From: https://github.com/serengil/deepface_models/releases/download/v1.0/openface_weights.h5
+To: /root/.deepface/weights/openface_weights.h5
+
+  0%|          | 0.00/15.3M [00:00<?, ?B/s]
+100%|██████████| 15.3M/15.3M [00:00<00:00, 28.7MB/s]
+✓ Data saved to Supabase - Record ID: 5b9ed4f9-3788-4bad-9112-cc42994838cb
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+Too little data for declared Content-Length
+ 
